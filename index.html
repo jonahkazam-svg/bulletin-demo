@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Bullet.in: an AI guide that filters Wharton opportunities to your interests. Student prototype, Dollar Group #4.">
+<style>*,*::before,*::after{box-sizing:border-box}:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,sans-serif}h1,h2,h3,p,ol{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<title>Bullet.in Wharton</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Patrick+Hand&display=swap">
+<style>
+/* Layout: a phone-width chat pinned to a corkboard; bot replies are paper notes, the bulletin is a pinned card with a day strip. */
+:root{
+  --cork:#B98B5E; --cork-dk:#9C7248; --cork-lt:#CDA275;
+  --paper:#FCFAF5; --paper-2:#F2EDE3; --line:#E3DBCB;
+  --ink:#23252B; --muted:#6E675B;
+  --navy:#1E2E6E; --blue:#3C6FE0; --blue-soft:#E3EBFD;
+  --pin:#D23A2F; --tape:rgba(240,226,190,.85); --sticky:#FFF3B5; --sticky-ink:#3A3210;
+  --ok:#1E7A4C;
+  --f-display:"Lexend",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-hand:"Patrick Hand","Comic Sans MS","Bradley Hand",cursive;
+  --shadow:0 1px 0 rgba(0,0,0,.05),0 6px 18px rgba(60,35,10,.22);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --cork:#3B2C1F; --cork-dk:#2E2117; --cork-lt:#4A3827;
+  --paper:#23252C; --paper-2:#2C2F38; --line:#3A3D47;
+  --ink:#EDEAE3; --muted:#A8A196;
+  --navy:#A9BDFF; --blue:#6C95F2; --blue-soft:#25324F;
+  --pin:#E8584C; --tape:rgba(120,105,70,.75); --sticky:#4A4220; --sticky-ink:#FBF1C4; --ok:#5FD39A;
+  --shadow:0 1px 0 rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --cork:#3B2C1F; --cork-dk:#2E2117; --cork-lt:#4A3827;
+  --paper:#23252C; --paper-2:#2C2F38; --line:#3A3D47;
+  --ink:#EDEAE3; --muted:#A8A196;
+  --navy:#A9BDFF; --blue:#6C95F2; --blue-soft:#25324F;
+  --pin:#E8584C; --tape:rgba(120,105,70,.75); --sticky:#4A4220; --sticky-ink:#FBF1C4; --ok:#5FD39A;
+  --shadow:0 1px 0 rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.5); color-scheme:dark}
+
+html,body{height:100%}
+body{
+  background-color:var(--cork);
+  background-image:
+    radial-gradient(circle at 20% 30%,var(--cork-dk) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 70% 60%,var(--cork-lt) 0 1px,transparent 1.8px),
+    radial-gradient(circle at 40% 80%,var(--cork-dk) 0 .8px,transparent 1.4px);
+  background-size:7px 7px,11px 11px,5px 5px;
+  color:var(--ink); font-family:var(--f-display); font-weight:400; font-size:15px; line-height:1.45;
+  overflow:hidden;
+}
+.app{height:100%; max-width:560px; margin:0 auto; display:flex; flex-direction:column;
+  padding-left:max(12px,env(safe-area-inset-left,0px)); padding-right:max(12px,env(safe-area-inset-right,0px));}
+
+/* header */
+header{flex:none; padding-block:12px 10px; display:flex; align-items:center; gap:12px}
+.brand{display:flex; align-items:center; gap:10px; background:var(--paper); padding:8px 14px 8px 10px;
+  border-radius:4px; box-shadow:var(--shadow); transform:rotate(-1.2deg); position:relative}
+.brand::before{content:""; position:absolute; top:-7px; left:50%; width:12px; height:12px; margin-left:-6px;
+  border-radius:50%; background:radial-gradient(circle at 35% 35%,#ff8a7f,var(--pin) 60%); box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.chev{width:34px; height:24px; flex:none}
+.brand-txt{display:flex; flex-direction:column; line-height:1}
+.brand-tag{font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#fff; background:var(--blue);
+  align-self:flex-start; padding:2px 6px; border-radius:2px; margin-bottom:3px}
+.brand-name{font-size:22px; font-weight:600; letter-spacing:-.02em; color:var(--ink)}
+.head-note{margin-left:auto; font-family:var(--f-hand); font-size:15px; color:#fff; text-align:right; line-height:1.1;
+  text-shadow:0 1px 2px rgba(0,0,0,.45)}
+
+/* feed */
+#feed{flex:1; overflow-y:auto; overflow-x:hidden; padding-block:6px 14px; display:flex; flex-direction:column; gap:12px;
+  scroll-behavior:smooth; -webkit-overflow-scrolling:touch}
+.msg{max-width:88%; min-width:0}
+.bot{align-self:flex-start}
+.user{align-self:flex-end}
+.note{background:var(--paper); color:var(--ink); padding:12px 14px; border-radius:3px 12px 12px 12px; box-shadow:var(--shadow);
+  overflow-wrap:anywhere}
+.user .note{background:var(--blue); color:#fff; border-radius:12px 3px 12px 12px}
+.note b{font-weight:600}
+.note p+p{margin-top:8px}
+.who{font-family:var(--f-hand); font-size:14px; color:#fff; margin:0 0 3px 4px; text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.typing{display:inline-flex; gap:4px; padding:14px 16px}
+.typing i{width:7px; height:7px; border-radius:50%; background:var(--muted); animation:bob 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes bob{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+
+/* interest picker */
+.picker{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.pick{font:inherit; font-size:14px; border:1.5px solid var(--line); background:var(--paper-2); color:var(--ink);
+  padding:7px 12px; border-radius:999px; cursor:pointer}
+.pick[aria-pressed="true"]{background:var(--blue); border-color:var(--blue); color:#fff}
+.btn{font:inherit; font-weight:600; font-size:14px; background:var(--navy); color:var(--paper); border:0; padding:10px 16px;
+  border-radius:999px; cursor:pointer; margin-top:12px}
+.btn:disabled{opacity:.4; cursor:default}
+
+/* bulletin card */
+.board{width:100%; max-width:100%; align-self:stretch; position:relative}
+.card{background:var(--paper); border-radius:6px; box-shadow:var(--shadow); padding:16px 14px 14px; position:relative}
+.card::before{content:""; position:absolute; top:-8px; left:22px; width:14px; height:14px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#ff8a7f,var(--pin) 60%); box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.card h2{font-size:19px; font-weight:600; letter-spacing:-.01em; text-wrap:balance}
+.inbox{display:flex; align-items:center; gap:10px; margin-top:8px; padding:8px 10px; background:var(--paper-2); border-radius:6px;
+  font-size:13px; color:var(--muted)}
+.inbox strong{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+.inbox .arrow{color:var(--blue); font-weight:700}
+.sec{font-family:var(--f-hand); font-size:18px; color:var(--navy); margin:16px 0 8px; display:flex; align-items:baseline; gap:8px}
+.sec small{font-family:var(--f-display); font-size:11px; color:var(--muted); letter-spacing:.04em; text-transform:uppercase}
+
+.days{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center}
+.day{font:inherit; background:none; border:0; color:var(--muted); cursor:pointer; padding:0; display:flex; flex-direction:column; align-items:center; gap:4px; font-size:11px}
+.day span{width:36px; height:36px; max-width:100%; display:grid; place-items:center; border-radius:50%; background:var(--paper-2);
+  color:var(--ink); font-size:14px; font-variant-numeric:tabular-nums}
+.day[aria-pressed="true"] span{background:var(--blue); color:#fff}
+
+.events{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px}
+.ev{border-radius:12px; padding:12px; color:#fff; min-height:104px; display:flex; flex-direction:column; justify-content:space-between;
+  min-width:0; position:relative; overflow:hidden}
+.ev:first-child{grid-column:1/-1; min-height:118px}
+.ev .t{font-size:22px; font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.ev .n{font-size:14px; font-weight:500; line-height:1.25}
+.ev .h{font-size:11.5px; opacity:.85; margin-top:2px}
+.ev .why{position:absolute; top:10px; right:10px; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+  background:rgba(255,255,255,.22); padding:3px 7px; border-radius:999px}
+.g-sports{background:linear-gradient(135deg,#B8452F,#7A2316)}
+.g-media{background:linear-gradient(135deg,#334A8F,#1A2550)}
+.g-marketing{background:linear-gradient(135deg,#B5527A,#6E2443)}
+.g-finance{background:linear-gradient(135deg,#2D6B57,#163A2F)}
+.g-consulting{background:linear-gradient(135deg,#4F5866,#262B33)}
+.g-entre{background:linear-gradient(135deg,#C7742B,#7D4110)}
+.g-tech{background:linear-gradient(135deg,#3C6FE0,#1C3A85)}
+.g-realestate{background:linear-gradient(135deg,#7A6342,#43341F)}
+.g-law{background:linear-gradient(135deg,#5B3F86,#2E1E4B)}
+.g-research{background:linear-gradient(135deg,#2C7180,#123D46)}
+.g-health{background:linear-gradient(135deg,#2F8A73,#14493C)}
+.g-impact{background:linear-gradient(135deg,#5F8A35,#2E4716)}
+.g-career{background:linear-gradient(135deg,#40507A,#1E2742)}
+.g-neuro{background:linear-gradient(135deg,#7A4FB3,#3B2364)}
+.g-quant{background:linear-gradient(135deg,#2F6C8F,#163449)}
+.g-design{background:linear-gradient(135deg,#C2577D,#6A2440)}
+.g-fashion{background:linear-gradient(135deg,#A8566B,#552433)}
+.g-music{background:linear-gradient(135deg,#8C3FA0,#45194F)}
+.g-writing{background:linear-gradient(135deg,#6B5A3E,#3A2F1E)}
+.g-speaking{background:linear-gradient(135deg,#3D5EA8,#1D2E57)}
+.g-crypto{background:linear-gradient(135deg,#C08A1E,#6B4A0B)}
+.g-gaming{background:linear-gradient(135deg,#5841B8,#291C60)}
+.g-global{background:linear-gradient(135deg,#287A8C,#113E48)}
+.g-women{background:linear-gradient(135deg,#B04A62,#5C1F31)}
+.g-food{background:linear-gradient(135deg,#C2602F,#6B2D10)}
+.g-engineering{background:linear-gradient(135deg,#55626F,#262D35)}
+.g-community{background:linear-gradient(135deg,#9A5B2E,#4E2B12)}
+.watch{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px; font-size:12.5px; color:var(--muted)}
+.watch span{background:var(--blue-soft); color:var(--blue); font-weight:600; padding:2px 8px; border-radius:999px}
+.pick.more{border-style:dashed; background:transparent; color:var(--muted)}
+.empty-day{grid-column:1/-1; font-size:13px; color:var(--muted); padding:14px; text-align:center; background:var(--paper-2); border-radius:10px}
+
+.list{display:flex; flex-direction:column; gap:8px}
+.item{display:grid; grid-template-columns:1fr auto; gap:4px 10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; min-width:0}
+.item .ttl{font-weight:600; font-size:14.5px; line-height:1.3; min-width:0}
+.item .meta{grid-column:1/-1; font-size:13px; color:var(--muted); line-height:1.4}
+.item .row{grid-column:1/-1; display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:2px}
+.kind{font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--blue); background:var(--blue-soft);
+  padding:3px 7px; border-radius:4px; align-self:start; white-space:nowrap}
+.due{font-size:12px; font-weight:500; color:var(--pin); font-variant-numeric:tabular-nums}
+.link{font-size:12.5px; font-weight:600; color:var(--blue); text-decoration:none; margin-left:auto}
+.link:hover{text-decoration:underline}
+
+.sticky{background:var(--sticky); color:var(--sticky-ink); padding:14px; border-radius:2px; transform:rotate(.8deg);
+  box-shadow:var(--shadow); position:relative; margin-top:6px}
+.sticky::after{content:""; position:absolute; top:-9px; left:50%; width:70px; height:18px; margin-left:-35px; background:var(--tape); transform:rotate(-3deg)}
+.sticky .hand{font-family:var(--f-hand); font-size:19px; line-height:1.15}
+.sticky p{font-size:13.5px; margin-top:6px}
+.sticky a{color:inherit; font-weight:600}
+
+.people{display:flex; flex-direction:column; gap:8px}
+.person{display:flex; gap:10px; align-items:flex-start; padding:10px; border:1px solid var(--line); border-radius:8px}
+.av{width:36px; height:36px; flex:none; border-radius:50%; display:grid; place-items:center; font-weight:600; font-size:13px; color:#fff; background:var(--blue)}
+.person .nm{font-weight:600; font-size:14px}
+.person .rl{font-size:12.5px; color:var(--muted)}
+
+.news{border:1px dashed var(--line); border-radius:8px; padding:12px}
+.news .subj{font-weight:600}
+.news .from{font-size:12px; color:var(--muted); margin-bottom:8px}
+.news ol{padding-left:18px; display:flex; flex-direction:column; gap:6px; font-size:13.5px}
+
+.foot{font-size:11.5px; color:var(--muted); margin-top:12px; line-height:1.4}
+
+/* composer */
+.dock{flex:none; padding-block:8px max(10px,env(safe-area-inset-bottom,0px))}
+.quick{display:flex; gap:8px; overflow-x:auto; padding:2px 2px 8px; scrollbar-width:none}
+.quick::-webkit-scrollbar{display:none}
+.qr{font:inherit; font-size:13.5px; white-space:nowrap; background:var(--paper); color:var(--ink); border:0; padding:8px 13px;
+  border-radius:999px; box-shadow:0 2px 6px rgba(40,20,0,.25); cursor:pointer}
+.qr:active{transform:translateY(1px)}
+form{display:flex; gap:8px; background:var(--paper); border-radius:999px; padding:6px 6px 6px 16px; box-shadow:var(--shadow)}
+#q{flex:1; min-width:0; font:inherit; font-size:16px; border:0; background:transparent; color:var(--ink); outline:none}
+#q::placeholder{color:var(--muted)}
+.send{flex:none; width:40px; height:40px; border-radius:50%; border:0; background:var(--blue); color:#fff; cursor:pointer; display:grid; place-items:center}
+.send svg{width:20px; height:20px}
+.toast{position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--navy); color:var(--paper);
+  padding:8px 14px; border-radius:999px; font-size:13px; box-shadow:var(--shadow); z-index:5}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important; scroll-behavior:auto!important}}
+@keyframes rise{from{transform:translateY(6px)}to{transform:none}}
+.msg{animation:rise .25s ease-out}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand" aria-label="Bullet.in at Wharton">
+      <svg class="chev" viewBox="0 0 34 24" aria-hidden="true">
+        <path d="M3 3l9 9-9 9" fill="none" stroke="#3C6FE0" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 3l9 9-9 9" fill="none" stroke="#5E8AEA" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+        <path d="M21 3l9 9-9 9" fill="none" stroke="#8FAEF0" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/>
+      </svg>
+      <div class="brand-txt"><span class="brand-tag">Wharton</span><span class="brand-name">Bullet.in</span></div>
+    </div>
+    <div class="head-note">Let's explore…<br>prototype demo</div>
+  </header>
+
+  <main id="feed" aria-live="polite"></main>
+
+  <div class="dock">
+    <div class="quick" id="quick"></div>
+    <form id="composer" autocomplete="off">
+      <label for="q" class="sr" hidden>Message</label>
+      <input id="q" placeholder="Tell me what you're into…" enterkeyhint="send">
+      <button class="send" type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ---------- interests: what the bot understands ---------- */
+const INTERESTS = [
+  {id:"sports", label:"Sports", feat:1, kw:["sport","athlet","nba","nfl","mlb","nhl","wnba","football","basketball","soccer","baseball","hockey","tennis","rowing","espn","quakers","game day","olympic","sports betting","fantasy"]},
+  {id:"media", label:"Media & News", feat:1, kw:["media","journalis","newscast","broadcast","news","newspaper","comms","communication","reporter","reporting","anchor","podcast","tv","television","press","film","movie","entertainment","radio","on camera"]},
+  {id:"marketing", label:"Marketing", feat:1, kw:["marketing","brand","advertis","ads","social media","consumer","influencer","content creat","tiktok","instagram"]},
+  {id:"finance", label:"Finance", feat:1, kw:["finance","financ","bank","ib","investment","investing","invest","private equity","pe","hedge","trading","trader","stock","wall street","asset management","accounting","accountant","cpa","valuation"]},
+  {id:"consulting", label:"Consulting", feat:1, kw:["consult","strategy","case interview","case comp","mckinsey","bain","bcg"]},
+  {id:"entre", label:"Startups", feat:1, kw:["startup","start-up","start up","founder","entrepreneur","venture","vc","side project","apps","small business","own business","my own company"]},
+  {id:"tech", label:"AI & Tech", feat:1, kw:["ai","artificial intelligence","tech","data","analytic","coding","code","coder","software","machine learning","computer","programming","python","cyber","hacking","cs"]},
+  {id:"neuro", label:"Neuroscience & Psych", feat:1, kw:["neuro","neuroscience","brain","psych","psychology","cognitive","cognition","behavior","behaviour","behavioral","decision making","decision-making","mental","emotion","consciousness","bbb","nudge"]},
+  {id:"law", label:"Law & Policy", feat:1, kw:["law","legal","policy","government","politic","lawyer","pre-law","prelaw","regulat","public service","economics","econ","diplomac"]},
+  {id:"health", label:"Health & Life Sciences", feat:1, kw:["health","medic","medicine","doctor","hospital","biotech","pharma","pre-med","premed","biology","bio","chemistry","genetic","life science","nursing","public health"]},
+  {id:"realestate", label:"Real Estate", feat:1, kw:["real estate","property","properties","housing","reit","landlord","construction"]},
+  {id:"impact", label:"Social Impact", feat:1, kw:["impact","nonprofit","non-profit","social good","sustainab","climate","energy","environment","community service","volunteer","esg","philanthrop"]},
+  {id:"research", label:"Research", kw:["research","phd","academi","professor","thesis","research lab","lab work"]},
+  {id:"quant", label:"Math & Quant", kw:["math","quant","statistic","stats","probability","actuar","econometric","calculus"]},
+  {id:"design", label:"Design & Art", kw:["design","art","arts","ux","ui","graphic","architecture","creative","drawing","painting","photograph","illustrat"]},
+  {id:"fashion", label:"Fashion & Retail", kw:["fashion","luxury","retail","clothing","apparel","beauty","cosmetic","sneaker","streetwear","shopping"]},
+  {id:"music", label:"Music & Performance", kw:["music","singing","singer","a cappella","acapella","band","dj","concert","perform","theater","theatre","dance","dancing","piano","guitar","rapper","musical"]},
+  {id:"writing", label:"Writing", kw:["writing","writer","write","poetry","poem","creative writing","fiction","novel","literature","books","reading","essay"]},
+  {id:"speaking", label:"Public Speaking", kw:["public speaking","speaking","speech","presentation","debate","rhetoric","talking to people","being on camera"]},
+  {id:"crypto", label:"Crypto & Web3", kw:["crypto","blockchain","web3","bitcoin","ethereum","defi","nft","token"]},
+  {id:"gaming", label:"Gaming & Esports", kw:["gaming","gamer","video game","videogame","esport","e-sport","league of legends","valorant","twitch","minecraft","fortnite"]},
+  {id:"global", label:"Global Business", kw:["global","international","abroad","travel","languag","europe","asia","africa","latin america","china","india","emerging market","foreign"]},
+  {id:"women", label:"Women in Business", kw:["women","woman","female","girls in","girlboss","sisterhood"]},
+  {id:"food", label:"Food & Hospitality", kw:["food","cooking","cook","restaurant","hospitality","chef","culinary","baking","beverage","hotel"]},
+  {id:"engineering", label:"Engineering & Hardware", kw:["engineer","robot","hardware","electric vehicle","ev","aerospace","space","rocket","mechanical","drone","cars"]},
+  {id:"community", label:"Identity & Community", kw:["black","african american","latino","latina","latinx","hispanic","first-gen","first gen","first generation","fgli","low-income","low income"]}
+];
+const LABEL = Object.fromEntries(INTERESTS.map(i=>[i.id,i.label]));
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+INTERESTS.forEach(i=>{
+  i.re = i.kw.map(k=> k.length<=3
+    ? new RegExp("(^|[^a-z])"+reEsc(k)+"([^a-z]|$)")
+    : new RegExp("(^|[^a-z])"+reEsc(k)));
+  i.fuzzy = i.kw.filter(k=>k.length>=6 && !k.includes(" "));
+});
+
+/* ---------- real Penn & Wharton opportunities ---------- */
+const U = {
+  clubs:"https://undergrad-inside.wharton.upenn.edu/clubs/",
+  council:"https://groups.wharton.upenn.edu/whcouncil/clubs/",
+  wsb:"https://wsb.wharton.upenn.edu/students",
+  vlab:"https://venturelab.upenn.edu/for-students",
+  vlabAll:"https://venturelab.upenn.edu/Community",
+  research:"https://undergrad.wharton.upenn.edu/research-experiences/",
+  ai:"https://ai-analytics.wharton.upenn.edu/",
+  win:"https://neuro.wharton.upenn.edu/",
+  pennclubs:"https://pennclubs.com/"
+};
+
+const CATALOG = [
+  {id:"wusbc", t:"Wharton Undergraduate Sports Business Club", k:"Club", tags:["sports","marketing"], d:21, dl:"Spring recruiting opens",
+   b:"Founded in 2005. Runs the Wharton Sports Business Summit every fall and recruits in both semesters. Open to every Penn school.", u:"https://pennclubs.com/club/sports-business/"},
+  {id:"wsabi", t:"Wharton Sports Analytics & Business Initiative", k:"Initiative", tags:["sports","tech","gaming"],
+   b:"Wharton's sports hub: the Summit, industry partnerships, and the Sports Analytics Journal you can submit to.", u:U.wsb},
+  {id:"psrg", t:"Penn Sports Research Group", k:"Research", tags:["sports","research","quant"],
+   b:"A select group of undergrads learning statistics through sports, run through WSABI.", u:U.wsb},
+  {id:"wyner", t:"Sports Analytics Seminar with Prof. Adi Wyner", k:"Seminar", tags:["sports","tech","quant"],
+   b:"Non-credit seminar where students work on real sports datasets and business problems.", u:U.wsb},
+  {id:"lgst2070", t:"LGST 2070: The Sports Industry, Business & Legal Aspects", k:"Course", tags:["sports","law"], d:10, dl:"Course application",
+   b:"Taught by lecturer Rob DiGisi, who co-founded the Wharton Sports Business Initiative. Students apply online to enroll.", u:"https://lgst.wharton.upenn.edu/profile/digisir"},
+  {id:"dp", t:"The Daily Pennsylvanian", k:"Publication", tags:["media","sports","writing"], d:6, dl:"New writer meeting",
+   b:"Penn's independent student paper. Sports, news, opinion and photo all take first-time writers in any year.", u:"https://www.thedp.com"},
+  {id:"quakernation", t:"Quaker Nation newsletter", k:"Newsletter", tags:["sports","media"],
+   b:"The DP's free weekly sports newsletter. Lands Monday mornings.", u:"https://www.thedp.com"},
+  {id:"street", t:"34th Street Magazine", k:"Publication", tags:["writing","media","design","music"],
+   b:"The DP's arts and culture magazine. Features, reviews, photo and design.", u:"https://www.34st.com"},
+  {id:"utv", t:"UTV13, Penn's student TV station", k:"Club", tags:["media","sports","speaking"],
+   b:"Student-run TV. Anchoring, producing and sports broadcasts. Search \"UTV\" on Penn Clubs to join.", u:U.pennclubs},
+  {id:"wqhs", t:"WQHS, Penn's student radio", k:"Club", tags:["music","media"],
+   b:"Student radio. DJ your own show, run music and talk programming.", u:"https://wqhs.upenn.edu/"},
+  {id:"comm", t:"Wharton Communication Program", k:"Coaching", tags:["speaking","media"],
+   b:"One-on-one coaching and workshops for undergrads on speaking, presenting and writing.", u:"https://communicationprogram.wharton.upenn.edu/ug/"},
+  {id:"wme", t:"Wharton Undergraduate Media & Entertainment Club", k:"Club", tags:["media","marketing","music"], d:18, dl:"Spring applications",
+   b:"Speakers and treks across film, music, streaming and sports media.", u:U.clubs},
+  {id:"muse", t:"MUSE (Marketing Undergraduate Students Establishment)", k:"Club", tags:["marketing","fashion"], d:16, dl:"Spring applications",
+   b:"Knowledge, relationships and resources for students curious about marketing.", u:U.clubs},
+  {id:"wufc", t:"Wharton Undergraduate Finance Club", k:"Club", tags:["finance"], d:14, dl:"Case team applications",
+   b:"The broadest finance club on campus, open to students from every Penn school.", u:"https://pennclubs.com/club/wharton-undergraduate-finance-club/"},
+  {id:"wuft", t:"Wharton Undergraduate Finance & Technology Group", k:"Club", tags:["finance","tech","crypto"],
+   b:"Where finance meets tech: fintech, crypto, SPACs and AI.", u:U.council},
+  {id:"wudig", t:"Wharton Undergraduate Distressed Investing Group", k:"Club", tags:["finance"],
+   b:"Restructuring and special situations, taught from the ground up.", u:U.clubs},
+  {id:"waag", t:"Wharton Actuarial and Accounting Group", k:"Club", tags:["quant","finance"],
+   b:"For students into accounting, actuarial science and the math behind risk.", u:U.clubs},
+  {id:"wucc", t:"Wharton Undergraduate Consulting Club", k:"Club", tags:["consulting"], d:12, dl:"Case workshop sign-up",
+   b:"Resources and case prep for students weighing a career in consulting.", u:U.council},
+  {id:"sicg", t:"Social Impact Consulting Group", k:"Club", tags:["consulting","impact"],
+   b:"Student consultants working with mission-driven organizations.", u:U.council},
+  {id:"piic", t:"Penn International Impact Consulting", k:"Club", tags:["consulting","impact","global"],
+   b:"Uses business skills to help organizations serving people in need around the world.", u:U.clubs},
+  {id:"wgrc", t:"Wharton Global Research and Consulting Undergraduate Group", k:"Club", tags:["global","consulting"],
+   b:"Cross-border research and consulting projects.", u:U.clubs},
+  {id:"weurope", t:"Wharton Europe", k:"Club", tags:["global"],
+   b:"A network for Europe-affiliated undergrads and anyone heading into European business.", u:U.clubs},
+  {id:"wrap", t:"World Research Assistantship Program (WRAP)", k:"Research", tags:["global","research"], d:40, dl:"Summer application",
+   b:"Funds Wharton undergrads to work as research assistants at a university outside Penn for 8 to 12 summer weeks.", u:"https://undergrad-inside.wharton.upenn.edu/research/wrap/"},
+  {id:"vlab", t:"Venture Lab at Tangen Hall", k:"Hub", tags:["entre"],
+   b:"Penn's home for student entrepreneurship, open to every Penn school at any experience level.", u:U.vlab},
+  {id:"shm", t:"Start Here Mondays", k:"Drop-in", tags:["entre"],
+   b:"One-on-one guidance from Venture Lab staff on which programs fit you.", u:"https://venturelab.upenn.edu/start-here-mondays"},
+  {id:"vip", t:"Venture Initiation Program (VIP)", k:"Incubator", tags:["entre"],
+   b:"Venture Lab's incubator for Penn students already working on a company.", u:"https://venturelab.upenn.edu/get-started"},
+  {id:"startup", t:"Penn Wharton Startup Challenge", k:"Competition", tags:["entre"], d:30, dl:"Registration closes",
+   b:"Venture Lab's flagship startup competition.", u:U.vlabAll},
+  {id:"beton", t:"Bet on Entrepreneurship VC Program", k:"Program", tags:["entre","finance","community"],
+   b:"Places first-generation and/or limited-income undergrads inside a venture capital firm.", u:"https://venturelab.upenn.edu/bet-on-entrepreneurship-venture-capital-program"},
+  {id:"retaillab", t:"Retail Lab at Venture Lab", k:"Space", tags:["entre","marketing","fashion"],
+   b:"An innovation space for testing consumer and retail ideas with real shoppers.", u:U.vlabAll},
+  {id:"foodlab", t:"Food Innovation Lab at Venture Lab", k:"Space", tags:["food","entre"],
+   b:"A test kitchen in Tangen Hall for students building food and beverage ideas.", u:U.vlabAll},
+  {id:"ddstudio", t:"Digital Design Studio at Venture Lab", k:"Space", tags:["design","entre"],
+   b:"Design tools and space for prototyping brands, products and interfaces.", u:U.vlabAll},
+  {id:"engstudio", t:"Engineering Studios at Venture Lab", k:"Space", tags:["engineering","entre"],
+   b:"Hardware and prototyping space run with Penn Engineering.", u:U.vlabAll},
+  {id:"aero", t:"Wharton Undergraduate Aerospace Club", k:"Club", tags:["engineering"],
+   b:"The business of aviation, defense and space.", u:U.clubs},
+  {id:"aiconc", t:"Artificial Intelligence for Business concentration", k:"Academic", tags:["tech","quant"],
+   b:"Wharton's newest undergrad concentration, launched fall 2025 and run by Statistics & Data Science with OID.", u:U.ai},
+  {id:"aiinit", t:"Wharton AI & Analytics Initiative", k:"Initiative", tags:["tech","research"],
+   b:"Wharton's AI hub. Hosts conferences and the free AI Horizons webinar series.", u:U.ai},
+  {id:"wudac", t:"Wharton Undergraduate Data Analytics Club", k:"Club", tags:["tech","quant"], d:15, dl:"Spring applications",
+   b:"Hands-on analytics projects and workshops.", u:U.clubs},
+  {id:"cyber", t:"Cybersecurity at Penn", k:"Club", tags:["tech"],
+   b:"Hacking competitions, security workshops and industry talks.", u:"https://pennclubs.com/club/penn-cyber-group"},
+  {id:"blockchain", t:"Blockchain at Penn", k:"Club", tags:["crypto","tech","finance"],
+   b:"Penn's crypto and Web3 club: education, research and builder projects.", u:"https://pennclubs.com/club/penn-blockchain/"},
+  {id:"esports", t:"Penn Esports", k:"Club", tags:["gaming"],
+   b:"Competitive teams and casual play across the big titles.", u:"https://pennclubs.com/club/university-of-pennsylvania-esports-association"},
+  {id:"lol", t:"Penn League of Legends Club", k:"Club", tags:["gaming"],
+   b:"Ranked teams and community for League players.", u:"https://pennclubs.com/club/penn-league-of-legends-club"},
+  {id:"win", t:"Wharton Neuroscience Initiative (WiN)", k:"Initiative", tags:["neuro","research","marketing"],
+   b:"Brings brain science into business: how people decide, buy, lead and work. Research, courses and events open to undergrads.", u:U.win},
+  {id:"winfellow", t:"Applied Neuroscience & Business Analytics Summer Fellowship", k:"Fellowship", tags:["neuro","research","tech"], d:35, dl:"Fellowship application",
+   b:"WiN's paid summer research fellowship for undergraduates.", u:"https://neuro.wharton.upenn.edu/education/summer-research-fellowship/"},
+  {id:"winss", t:"WiN Student Society", k:"Club", tags:["neuro"],
+   b:"The student community around the Wharton Neuroscience Initiative. Talks, socials and research intros.", u:"https://neuro.wharton.upenn.edu/community/winss"},
+  {id:"mindcore", t:"MindCORE summer research internship", k:"Research", tags:["neuro","research","community"], d:42, dl:"Internship application",
+   b:"Penn's mind and brain hub runs a summer research internship for underrepresented undergrads.", u:"https://mindcore.sas.upenn.edu/"},
+  {id:"neuromajor", t:"Neuroscience at Penn (major and minor)", k:"Academic", tags:["neuro","health"],
+   b:"How to study neuroscience at Penn alongside a Wharton degree.", u:"https://neuroscience.sas.upenn.edu/"},
+  {id:"bcfg", t:"Behavior Change for Good Initiative", k:"Research", tags:["neuro","research","impact"],
+   b:"Wharton research center led by Katy Milkman and Angela Duckworth that tests how to help people build better habits. Listed by CURF for undergrad research.", u:"https://curf.upenn.edu/rd/behavior-change-good"},
+  {id:"wurec", t:"Wharton Undergraduate Real Estate Club", k:"Club", tags:["realestate"], d:20, dl:"Spring committee recruiting",
+   b:"Treks to firms in New York and Boston plus access to Zell/Lurie's Ballard Executive Visitor Luncheons. Members from all four schools.", u:"https://realestate.wharton.upenn.edu/students/real-estate-clubs/"},
+  {id:"zell", t:"Zell/Lurie Real Estate Center", k:"Center", tags:["realestate","research"],
+   b:"Wharton's real estate center. Funds the student real estate clubs and runs a career mentor program.", u:"https://realestate.wharton.upenn.edu/students/"},
+  {id:"wupp", t:"Wharton Undergraduates in Public Policy", k:"Club", tags:["law","research","writing"], d:17, dl:"Spring applications",
+   b:"Consult for policy organizations, write original pieces and meet speakers. All class years welcome.", u:"https://pennclubs.com/club/wupp/"},
+  {id:"spur", t:"Wharton Summer Program for Undergraduate Research (SPUR)", k:"Research", tags:["research"], d:45, dl:"Proposal due",
+   b:"Ten paid summer weeks designing your own project with a Wharton faculty advisor.", u:U.research},
+  {id:"jws", t:"Joseph Wharton Scholars", k:"Scholars", tags:["research"], d:60, dl:"Apply end of first year",
+   b:"Wharton's research honors track. First-years can apply at the end of their first year.", u:U.research},
+  {id:"sire", t:"Wharton Social Impact Research Experience (SIRE)", k:"Grant", tags:["research","impact"], d:50, dl:"Grant application",
+   b:"Summer grants for student-designed research that creates economic and social value.", u:U.research},
+  {id:"purm", t:"Penn Undergraduate Research Mentoring (PURM)", k:"Research", tags:["research"],
+   b:"Puts first- and second-years on faculty research projects over the summer, in almost any field.", u:U.research},
+  {id:"whc", t:"Wharton Undergraduate Healthcare Club", k:"Club", tags:["health"], d:19, dl:"Spring applications",
+   b:"The business side of medicine, biotech and health systems.", u:U.clubs},
+  {id:"energy", t:"Wharton Undergraduate Energy Group", k:"Club", tags:["impact","engineering"],
+   b:"Energy markets, climate and the transition, from a business angle.", u:U.clubs},
+  {id:"wuec", t:"Wharton Undergraduate Entrepreneurship Club", k:"Club", tags:["entre"], d:13, dl:"Spring applications",
+   b:"Founders, builders and future early hires.", u:U.clubs},
+  {id:"kwh", t:"Kelly Writers House", k:"Community", tags:["writing","music"],
+   b:"Penn's home for writers. Open readings, workshops and a cottage on Locust Walk anyone can walk into.", u:"https://writing.upenn.edu/wh/about/"},
+  {id:"wwomen", t:"Wharton Women", k:"Club", tags:["women"], d:9, dl:"Membership sign-up",
+   b:"One of the biggest undergrad business clubs at Penn. Mentorship, career programming and community.", u:"https://pennclubs.com/club/wharton-women/"},
+  {id:"bwua", t:"Black Wharton Undergraduate Association", k:"Club", tags:["community"],
+   b:"Community and career programming for Black undergrads interested in business.", u:U.council},
+  {id:"wlatino", t:"Wharton Latino Undergraduate Association", k:"Club", tags:["community","global"],
+   b:"Community, mentorship and recruiting for Latino undergrads at Wharton.", u:U.council}
+];
+const BY_ID = Object.fromEntries(CATALOG.map(c=>[c.id,c]));
+
+/* names people might ask about directly */
+const ALIASES = [
+  ["sports business club","wusbc"],["wusbc","wusbc"],["usbc","wusbc"],["wsabi","wsabi"],["psrg","psrg"],["wyner","wyner"],
+  ["lgst 2070","lgst2070"],["lgst2070","lgst2070"],["digisi","lgst2070"],["daily pennsylvanian","dp"],["the dp","dp"],["dp","dp"],
+  ["quaker nation","quakernation"],["34th street","street"],["utv","utv"],["wqhs","wqhs"],["communication program","comm"],
+  ["muse","muse"],["wufc","wufc"],["finance club","wufc"],["wuft","wuft"],["wucc","wucc"],["consulting club","wucc"],
+  ["venture lab","vlab"],["vlab","vlab"],["tangen","vlab"],["vip","vip"],["startup challenge","startup"],["bet on entrepreneurship","beton"],
+  ["neuroscience initiative","win"],["wharton neuroscience","win"],["winss","winss"],["mindcore","mindcore"],["behavior change","bcfg"],
+  ["spur","spur"],["jws","jws"],["joseph wharton","jws"],["sire","sire"],["purm","purm"],["wurec","wurec"],["zell","zell"],["wupp","wupp"],
+  ["writers house","kwh"],["kwh","kwh"],["wharton women","wwomen"],["bwua","bwua"],["blockchain at penn","blockchain"],["penn esports","esports"],
+  ["ai concentration","aiconc"],["data analytics club","wudac"]
+].map(([a,id])=>[new RegExp("(^|[^a-z])"+reEsc(a)+"([^a-z]|$)"),id]);
+
+/* sample events for the demo calendar */
+const EVENTS = {
+  sports:[{n:"Sports Business Summit panel: careers on the business side", h:"WUSBC × WSABI · Huntsman Hall"},
+          {n:"Fireside: the business and law of sports", h:"Legal Studies & Business Ethics · JMHH"},
+          {n:"DP Sports coffee chat for new writers", h:"The Daily Pennsylvanian"},
+          {n:"Sports analytics seminar drop-in", h:"WSABI · Prof. Adi Wyner"}],
+  media:[{n:"Intro to news and sports writing workshop", h:"The Daily Pennsylvanian"},
+         {n:"UTV13 anchor tryouts", h:"Penn student TV"},
+         {n:"Entertainment Industry Luncheon", h:"Media & Entertainment Club"}],
+  marketing:[{n:"Brand case night: build a campaign in 90 minutes", h:"MUSE"},{n:"Retail Lab open hours", h:"Venture Lab · Tangen Hall"}],
+  finance:[{n:"Intro to markets for first-years", h:"WUFC"},{n:"Restructuring 101", h:"Distressed Investing Group"}],
+  consulting:[{n:"Case interview workshop", h:"WUCC"},{n:"Social impact project info session", h:"Social Impact Consulting Group"}],
+  entre:[{n:"Start Here Mondays drop-in", h:"Venture Lab · Tangen Hall"},{n:"Founder fireside: from dorm room to seed round", h:"Venture Lab"}],
+  tech:[{n:"AI Horizons webinar", h:"Wharton AI & Analytics Initiative"},{n:"Python for business data night", h:"Data Analytics Club"}],
+  neuro:[{n:"Brain science of decision-making talk", h:"Wharton Neuroscience Initiative"},
+         {n:"Summer fellowship info session", h:"WiN · Applied Neuroscience Fellowship"},
+         {n:"WiN Student Society social", h:"WiN Student Society"}],
+  realestate:[{n:"NYC trek info session", h:"WUREC"},{n:"Ballard Executive Visitor Luncheon", h:"Zell/Lurie Real Estate Center"}],
+  law:[{n:"Speaker night: careers in policy", h:"Wharton Undergraduates in Public Policy"}],
+  research:[{n:"Faculty research presentations (open to all)", h:"Joseph Wharton Scholars"},{n:"SPUR info session", h:"Wharton Undergraduate Division"}],
+  quant:[{n:"Probability puzzle night", h:"Actuarial and Accounting Group"}],
+  health:[{n:"Healthcare careers panel", h:"Wharton Undergraduate Healthcare Club"}],
+  impact:[{n:"Climate and business roundtable", h:"Energy Group"}],
+  design:[{n:"Digital Design Studio open hours", h:"Venture Lab"}],
+  fashion:[{n:"Retail Lab pop-up night", h:"Venture Lab"}],
+  music:[{n:"WQHS DJ training session", h:"Penn student radio"}],
+  writing:[{n:"Open reading night", h:"Kelly Writers House"}],
+  speaking:[{n:"Presentation coaching drop-in", h:"Wharton Communication Program"}],
+  crypto:[{n:"Intro to blockchain night", h:"Blockchain at Penn"}],
+  gaming:[{n:"Esports team tryouts", h:"Penn Esports"}],
+  global:[{n:"Research abroad (WRAP) info session", h:"Wharton Undergraduate Division"}],
+  women:[{n:"First-year welcome mixer", h:"Wharton Women"}],
+  food:[{n:"Test kitchen open night", h:"Food Innovation Lab · Venture Lab"}],
+  engineering:[{n:"Build night in the Engineering Studios", h:"Venture Lab"}],
+  community:[{n:"Welcome dinner for first-years", h:"BWUA × Wharton Latino"}],
+  career:[{n:"Career Fair", h:"Penn Career Services"}]
+};
+const TIMES = ["12:00 PM","3:00 PM","8:00 PM"];
+
+/* "outside your lane" pairings */
+const ADJACENT = [
+  {from:"sports", to:"law", id:"lgst2070", hand:"Sports + law?", line:"Rob DiGisi teaches sports business through Wharton's Legal Studies department. Contracts, leagues, betting regulation, all through a sports lens."},
+  {from:"sports", to:"quant", id:"psrg", hand:"Sports + stats?", line:"The Penn Sports Research Group teaches statistics using real sports data."},
+  {from:"media", to:"speaking", id:"comm", hand:"Want to be on camera?", line:"The Wharton Communication Program coaches undergrads one-on-one on speaking and presenting. Perfect practice for broadcasting."},
+  {from:"media", to:"sports", id:"utv", hand:"Try the anchor desk", line:"UTV13 is Penn's student TV station. You can anchor and call games as a first-year."},
+  {from:"neuro", to:"marketing", id:"win", hand:"Brains + business?", line:"Wharton's Neuroscience Initiative studies how people decide and buy. It is where psych meets marketing, and undergrads can get involved."},
+  {from:"marketing", to:"neuro", id:"win", hand:"Why do people buy?", line:"Wharton's Neuroscience Initiative studies the brain behind buying decisions. Consumer neuroscience is a real field here."},
+  {from:"neuro", to:"impact", id:"bcfg", hand:"Psych that changes habits", line:"Behavior Change for Good runs huge experiments on helping people build better habits. CURF lists it for undergrad research."},
+  {from:"finance", to:"tech", id:"wuft", hand:"Finance + AI?", line:"WUFT covers fintech, crypto and AI. A good second lane next to classic banking prep."},
+  {from:"tech", to:"neuro", id:"winfellow", hand:"AI + the brain?", line:"WiN's summer fellowship mixes neuroscience with business analytics. Data skills are exactly what they want."},
+  {from:"tech", to:"finance", id:"wuft", hand:"Tech + finance?", line:"WUFT is where the AI crowd and the finance crowd overlap."},
+  {from:"crypto", to:"finance", id:"wuft", hand:"Crypto + markets", line:"WUFT talks crypto next to traditional finance, so you learn both sides."},
+  {from:"marketing", to:"entre", id:"retaillab", hand:"Test it on real people", line:"Venture Lab's Retail Lab lets you put a consumer idea in front of actual shoppers."},
+  {from:"fashion", to:"entre", id:"retaillab", hand:"Launch a brand?", line:"Venture Lab's Retail Lab is a space for testing retail concepts with real customers."},
+  {from:"entre", to:"finance", id:"beton", hand:"See the investor side", line:"Bet on Entrepreneurship places FGLI undergrads inside a working VC firm."},
+  {from:"consulting", to:"impact", id:"sicg", hand:"Cases with a mission", line:"Social Impact Consulting Group runs real projects for mission-driven clients."},
+  {from:"impact", to:"research", id:"sire", hand:"Get paid to study it", line:"SIRE funds summer research on topics that create economic and social value."},
+  {from:"research", to:"neuro", id:"bcfg", hand:"Research on real behavior", line:"Behavior Change for Good is one of the biggest behavioral science labs in the country, and it sits at Wharton."},
+  {from:"law", to:"sports", id:"lgst2070", hand:"Law + sports?", line:"LGST 2070 covers the legal side of leagues, players and media rights."},
+  {from:"realestate", to:"research", id:"zell", hand:"Find a mentor", line:"Zell/Lurie runs a career mentor program on top of the club treks."},
+  {from:"health", to:"neuro", id:"win", hand:"Health + the brain?", line:"The Wharton Neuroscience Initiative connects brain science to how people make health and money decisions."},
+  {from:"quant", to:"sports", id:"psrg", hand:"Math + sports?", line:"The Penn Sports Research Group uses sports to teach real statistics."},
+  {from:"gaming", to:"sports", id:"wsabi", hand:"Esports is a business", line:"Wharton's sports initiative tracks esports and betting as part of the sports industry."},
+  {from:"writing", to:"media", id:"dp", hand:"Get published this week", line:"The DP takes first-time writers in every section. Your first byline can happen fast."},
+  {from:"music", to:"marketing", id:"wme", hand:"Music is a business", line:"The Media & Entertainment Club brings in people from labels, streaming and live events."},
+  {from:"speaking", to:"media", id:"utv", hand:"Practice on air", line:"UTV13 gives you real reps in front of a camera."},
+  {from:"design", to:"entre", id:"ddstudio", hand:"Design something real", line:"Venture Lab's Digital Design Studio has the tools to prototype brands and products."},
+  {from:"food", to:"entre", id:"foodlab", hand:"Start a food brand?", line:"Venture Lab has a real test kitchen for student food ideas."},
+  {from:"global", to:"research", id:"wrap", hand:"Research abroad", line:"WRAP pays Wharton undergrads to research at universities outside Penn over the summer."},
+  {from:"women", to:"finance", id:"wwomen", hand:"Build your network early", line:"Wharton Women runs mentorship and career programming from day one."},
+  {from:"community", to:"entre", id:"beton", hand:"A way into VC", line:"Bet on Entrepreneurship places FGLI students inside venture capital firms."},
+  {from:"engineering", to:"entre", id:"engstudio", hand:"Build the hardware", line:"Venture Lab's Engineering Studios are open for prototyping."}
+];
+
+const PEOPLE = {
+  sports:[{nm:"Rob DiGisi", rl:"Lecturer, LGST 2070 · co-founder of the Wharton Sports Business Initiative", i:"RD"},
+          {nm:"Adi Wyner", rl:"Statistics professor · runs the Sports Analytics Seminar", i:"AW"}],
+  neuro:[{nm:"Michael Platt", rl:"Director, Wharton Neuroscience Initiative", i:"MP"},
+         {nm:"Katy Milkman & Angela Duckworth", rl:"Co-directors, Behavior Change for Good", i:"BC"}],
+  entre:[{nm:"Trang Pham", rl:"Executive Director, Venture Lab", i:"TP"},
+         {nm:"Lori Rosenkopf", rl:"Vice Dean of Entrepreneurship · Faculty Director, Venture Lab", i:"LR"}],
+  tech:[{nm:"Eric Bradlow", rl:"Vice Dean of AI & Analytics", i:"EB"}],
+  law:[{nm:"Rob DiGisi", rl:"Lecturer, Legal Studies & Business Ethics", i:"RD"}],
+  research:[{nm:"Utsav Schurmans", rl:"Director of Research & Scholars Programs (SPUR contact)", i:"US"}]
+};
+
+/* ---------- state + helpers ---------- */
+const S = {name:"", tags:[], custom:[], stage:"name", lastAdj:null};
+const feed = document.getElementById("feed");
+const quick = document.getElementById("quick");
+const q = document.getElementById("q");
+
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today = new Date();
+const fmtDate = (d,o) => d.toLocaleDateString("en-US",o);
+const addDays = n => { const d=new Date(today); d.setDate(d.getDate()+n); return d; };
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+const listLabels = ts => ts.map(t=>LABEL[t]).join(", ");
+
+function scrollEnd(){ requestAnimationFrame(()=>{ feed.scrollTop = feed.scrollHeight; }); }
+function add(html, who="bot", cls=""){
+  const w = document.createElement("div");
+  w.className = `msg ${who} ${cls}`;
+  w.innerHTML = (who==="bot" && !cls.includes("board") ? `<div class="who">Bullet.in</div>` : "") + html;
+  feed.appendChild(w); scrollEnd(); return w;
+}
+let busy = Promise.resolve();
+function botSay(html, opts={}){
+  busy = busy.then(()=>new Promise(r=>{
+    const t = add(`<div class="note typing"><i></i><i></i><i></i></div>`,"bot");
+    setTimeout(()=>{
+      t.remove();
+      const el = opts.board ? add(html,"bot","board") : add(`<div class="note">${html}</div>`,"bot");
+      r(el);
+    }, opts.delay ?? 550);
+  }));
+  return busy;
+}
+function userSay(text){ add(`<div class="note">${esc(text)}</div>`,"user"); }
+function setQuick(items){
+  quick.innerHTML = "";
+  items.forEach(([label,fn])=>{
+    const b=document.createElement("button"); b.className="qr"; b.type="button"; b.textContent=label;
+    b.onclick=()=>{ userSay(label); fn(); };
+    quick.appendChild(b);
+  });
+}
+
+/* ---------- understanding what people type ---------- */
+function lev(a,b){
+  const m=a.length,n=b.length; if(Math.abs(m-n)>2) return 9;
+  let prev=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur;
+  }
+  return prev[n];
+}
+function norm(text){ return " "+text.toLowerCase().replace(/[’`]/g,"'").replace(/[^a-z0-9\s'&+-]/g," ").replace(/\s+/g," ")+" "; }
+function detectTags(text){
+  const s = norm(text);
+  const hit = [];
+  for(const i of INTERESTS) if(i.re.some(r=>r.test(s))) hit.push(i.id);
+  const words = s.split(" ").filter(w=>w.length>=6);
+  for(const w of words){
+    for(const i of INTERESTS){
+      if(hit.includes(i.id)) continue;
+      if(i.fuzzy.some(k=> k.length>=7 && w.length>=7 && (lev(w,k) <= (k.length>=9?2:1) || (w.length>k.length && lev(w.slice(0,k.length),k)<=1)))) hit.push(i.id);
+    }
+  }
+  return hit;
+}
+function findAliases(text){
+  const s = norm(text); const out=[];
+  for(const [re,id] of ALIASES) if(re.test(s) && !out.includes(id)) out.push(id);
+  return out;
+}
+const STOP = new Set(["i","im","i'm","really","a","an","the","and","to","in","into","about","of","for","with","my","me","some","lot","lots","like","love","stuff","things","thing","kind","sort","maybe","also","too","very","so","is","it","that","this","at","on","doing","do","get","more","work","working","go","be","become","learn","also"]);
+function extractTopic(text){
+  const s = text.toLowerCase().replace(/[’`]/g,"'");
+  const m = s.match(/(?:like|love|into|interested in|passionate about|obsessed with|curious about|enjoy|want to|wanna|would love to|hope to|plan to|dream (?:is|of)|major(?:ing)? in|studying|study)\s+(.+)/);
+  const raw = (m ? m[1] : s).split(/[.,!?;:]/)[0].replace(/[^a-z0-9\s&'-]/g," ").trim();
+  let words = raw.split(/\s+/).filter(Boolean);
+  while(words.length && STOP.has(words[0])) words.shift();
+  words = words.slice(0,4);
+  while(words.length && STOP.has(words[words.length-1])) words.pop();
+  return words.join(" ");
+}
+function parseName(text){
+  const m = text.match(/(?:i'?m|i am|my name is|my name's|name is|it'?s|call me|this is)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'-]{1,20})/i);
+  if(m && !detectTags(m[1]).length && !STOP.has(m[1].toLowerCase()) && !/^(really|super|so|very|into|interested|a|an|from|in|not)$/i.test(m[1])) return cap(m[1].toLowerCase());
+  const w = text.trim().replace(/[^A-Za-zÀ-ÿ'\s-]/g,"").split(/\s+/).filter(Boolean);
+  if(w.length && w.length<=2 && !/^(hi|hey|hello|yo|sup|skip|no|yes|ok|okay|what|how|who|why|help)$/i.test(w[0]) && !detectTags(text).length) return cap(w[0].toLowerCase());
+  return "";
+}
+
+/* ---------- building what the bot shows ---------- */
+function score(item){
+  let s = 0;
+  S.tags.forEach((t,ix)=>{ if(item.tags.includes(t)) s += 10 + (item.tags[0]===t?4:0) + Math.max(0,6-ix); });
+  return s + (item.d?1:0);
+}
+function matches(n=4, tags=S.tags){
+  const pool = CATALOG.filter(c=>c.tags.some(t=>tags.includes(t)));
+  pool.sort((a,b)=>score(b)-score(a));
+  /* make sure every chosen lane gets at least one pick */
+  const out = [];
+  tags.forEach(t=>{ const f = pool.find(c=>c.tags.includes(t) && !out.includes(c)); if(f && out.length<n) out.push(f); });
+  pool.forEach(c=>{ if(out.length<n && !out.includes(c)) out.push(c); });
+  return out;
+}
+function itemsFor(tag,n=3){ return CATALOG.filter(c=>c.tags.includes(tag)).sort((a,b)=>(b.tags[0]===tag)-(a.tags[0]===tag)).slice(0,n); }
+function pickAdjacent(exclude=[], tags=S.tags){
+  const ok = ADJACENT.filter(a=>tags.includes(a.from) && !exclude.includes(a.id));
+  return ok.find(a=>!S.tags.includes(a.to)) || ok[0] || ADJACENT.find(a=>!exclude.includes(a.id)) || ADJACENT[0];
+}
+function eventsFor(offset, tags=S.tags){
+  const pool = [];
+  tags.forEach(t=>(EVENTS[t]||[]).forEach((e,i)=>pool.push({...e,tag:t,rank:i})));
+  if(!pool.length) return [];
+  pool.sort((a,b)=>a.rank-b.rank || tags.indexOf(a.tag)-tags.indexOf(b.tag));
+  const n = Math.min(3, pool.length);
+  const shift = offset===0 ? 0 : (Math.abs(offset)*2 + 1) % pool.length;
+  let out = [];
+  for(let i=0;i<pool.length && out.length<n;i++){ const e = pool[(i+shift)%pool.length]; if(!out.includes(e)) out.push(e); }
+  if(offset===0 && tags[0]==="sports" && EVENTS.sports.length>=3) out = EVENTS.sports.slice(0,3).map(e=>({...e,tag:"sports"}));
+  else if(offset!==0 && Math.abs(offset)%3===2) out[out.length-1] = {...EVENTS.career[0], tag:"career"};
+  if([0,6].includes(addDays(offset).getDay()) && out.length>2) out.pop();
+  return out.map((e,i)=>({...e, time:TIMES[i]}));
+}
+function eventsHTML(offset, tags){
+  const ev = eventsFor(offset, tags);
+  if(!ev.length) return `<div class="empty-day">Nothing on your board this day. Enjoy it.</div>`;
+  return ev.map(e=>`<div class="ev g-${e.tag in GRAD ? e.tag : "career"}">
+      <span class="why">${esc(LABEL[e.tag]||"Career")}</span>
+      <div class="t">${e.time}</div>
+      <div><div class="n">${esc(e.n)}</div><div class="h">${esc(e.h)}</div></div>
+    </div>`).join("");
+}
+const GRAD = {sports:1,media:1,marketing:1,finance:1,consulting:1,entre:1,tech:1,realestate:1,law:1,research:1,health:1,impact:1,neuro:1,quant:1,design:1,fashion:1,music:1,writing:1,speaking:1,crypto:1,gaming:1,global:1,women:1,food:1,engineering:1,community:1};
+function itemHTML(c){
+  const due = c.d ? `<span class="due">${esc(c.dl)} · ${fmtDate(addDays(c.d),{month:"short",day:"numeric"})}</span>` : "";
+  return `<div class="item">
+    <div class="ttl">${esc(c.t)}</div><span class="kind">${esc(c.k)}</span>
+    <div class="meta">${esc(c.b)}</div>
+    <div class="row">${due}<a class="link" href="${c.u}" target="_blank" rel="noopener">Open ↗</a></div>
+  </div>`;
+}
+function stickyHTML(a){
+  const c = BY_ID[a.id];
+  return `<div class="sticky"><div class="hand">${esc(a.hand)}</div>
+    <p>${esc(a.line)}</p>
+    <p><a href="${c.u}" target="_blank" rel="noopener">${esc(c.t)} ↗</a></p></div>`;
+}
+function inboxStats(){
+  const total = 48 + S.tags.length*7 + (S.name.length%5);
+  const kept = Math.min(matches(8).length + 1, 9);
+  return {total, kept};
+}
+function weekStrip(){
+  return Array.from({length:7},(_,i)=>{
+    const off = i - today.getDay(); const d = addDays(off);
+    return `<button class="day" type="button" data-off="${off}" aria-pressed="${off===0}">${fmtDate(d,{weekday:"short"})}<span>${String(d.getDate()).padStart(2,"0")}</span></button>`;
+  }).join("");
+}
+function wireDays(el, tags){
+  const evBox = el.querySelector(".events");
+  el.querySelectorAll(".day").forEach(b=>b.addEventListener("click",()=>{
+    el.querySelectorAll(".day").forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    evBox.innerHTML = eventsHTML(+b.dataset.off, tags);
+  }));
+}
+
+async function buildBulletin(intro){
+  S.stage = "chat";
+  const nm = S.name ? `${esc(S.name)}'s` : "Your";
+  const {total,kept} = inboxStats();
+  const m = matches(4);
+  const adj = pickAdjacent();
+  S.lastAdj = adj.id;
+  const watching = S.custom.length ? `<div class="watch">Also watching for: ${S.custom.map(c=>`<span>${esc(c)}</span>`).join("")}</div>` : "";
+  botSay(intro || `On it${S.name?", "+esc(S.name):""}. I matched you on <b>${listLabels(S.tags)}</b>. Here's your board.`);
+  const el = await botSay(`<div class="card">
+      <h2>${nm} bulletin · ${fmtDate(today,{weekday:"long",month:"short",day:"numeric"})}</h2>
+      <div class="inbox"><span><strong>${total}</strong> club and program emails this week <span class="arrow">→</span> <strong>${kept}</strong> worth your time</span></div>
+      ${watching}
+      <div class="sec">This week <small>sample schedule</small></div>
+      <div class="days">${weekStrip()}</div>
+      <div class="events">${eventsHTML(0)}</div>
+      <div class="sec">Worth joining</div>
+      <div class="list">${m.map(itemHTML).join("")}</div>
+      <div class="sec">Outside your lane</div>
+      ${stickyHTML(adj)}
+      <div class="foot">Prototype by Dollar Group #4 for the Wharton Innovation Challenge. Club and program names link to real Penn pages. Event times and deadlines are sample data.</div>
+    </div>`, {board:true, delay:850});
+  wireDays(el, S.tags.slice());
+  chatQuick();
+}
+
+function chatQuick(){
+  setQuick([
+    ["What's due soon?", deadlines],
+    ["What's on tomorrow?", ()=>dayView(1)],
+    ["Preview my weekly email", newsletter],
+    ["Who should I meet?", people],
+    ["Surprise me", surprise],
+    ["Start over", restart]
+  ]);
+}
+
+/* a new interest mid-conversation gets its own mini board */
+async function addInterests(fresh, rawText){
+  S.tags = [...new Set([...S.tags, ...fresh])];
+  const lead = fresh.map(t=>LABEL[t]).join(" and ");
+  const items = [];
+  fresh.forEach(t=>itemsFor(t,3).forEach(c=>{ if(!items.includes(c)) items.push(c); }));
+  const ev = eventsFor(0, fresh).slice(0,2);
+  const adj = ADJACENT.find(a=>fresh.includes(a.from) && a.id!==S.lastAdj);
+  const ppl = []; fresh.forEach(t=>(PEOPLE[t]||[]).forEach(p=>{ if(!ppl.find(x=>x.nm===p.nm)) ppl.push(p); }));
+  const echo = extractTopic(rawText);
+  const said = echo && echo.length<28 ? cap(echo) : lead;
+  await botSay(`<p><b>${esc(said)}</b>, love that. Added <b>${lead}</b> to your board. Here's what Wharton and Penn have for it:</p>
+    ${ev.length?`<div class="events" style="margin-top:10px">${ev.map(e=>`<div class="ev g-${e.tag}"><span class="why">${esc(LABEL[e.tag])}</span><div class="t">${e.time}</div><div><div class="n">${esc(e.n)}</div><div class="h">${esc(e.h)}</div></div></div>`).join("")}</div>`:""}
+    <div class="list" style="margin-top:10px">${items.slice(0,4).map(itemHTML).join("")}</div>
+    ${ppl.length?`<p style="margin-top:10px">Worth a coffee chat: <b>${esc(ppl[0].nm)}</b>, ${esc(ppl[0].rl)}.</p>`:""}
+    ${adj?stickyHTML(adj):""}`, {delay:800});
+  if(adj) S.lastAdj = adj.id;
+  setQuick([["Rebuild my full board", ()=>buildBulletin(`Rebuilt with everything: <b>${listLabels(S.tags)}</b>.`)], ...quickRest()]);
+}
+function quickRest(){
+  return [["What's due soon?", deadlines],["Who should I meet?", people],["Surprise me", surprise],["Start over", restart]];
+}
+
+/* a topic I don't have a lane for: still respond to it */
+async function unknownTopic(topic){
+  const t = topic && topic.length<40 ? topic : "";
+  if(t && !S.custom.includes(t)) S.custom.push(t);
+  const near = S.tags.length ? matches(1)[0] : null;
+  await botSay(`<p>${t?`<b>${esc(cap(t))}</b>, nice. `:""}I don't have a dedicated lane for that yet, so I'll watch every listserv for${t?` "<b>${esc(t)}</b>"`:" it"} and flag anything that mentions it. Here's where to start today:</p>
+    <div class="list" style="margin-top:10px">
+      ${itemHTML({t:`Search "${t||"your interest"}" on Penn Clubs`, k:"Directory", b:"Penn has 800+ student organizations. The directory is searchable by keyword and tag.", u:U.pennclubs})}
+      ${itemHTML(BY_ID.purm)}
+      ${near?itemHTML(near):""}
+    </div>`);
+}
+
+async function deadlines(){
+  if(!S.tags.length) return askInterests();
+  const list = CATALOG.filter(c=>c.d && c.tags.some(t=>S.tags.includes(t))).sort((a,b)=>a.d-b.d).slice(0,4);
+  if(!list.length) return botSay("Nothing with a deadline in your lanes right now. I'll ping you the moment something opens.");
+  return botSay(`<p>Here's what closes first. I'd put the top one on your calendar today.</p>
+    <div class="list" style="margin-top:10px">${list.map(itemHTML).join("")}</div>`);
+}
+async function dayView(offset){
+  if(!S.tags.length) return askInterests();
+  const d = addDays(offset);
+  const label = offset===0?"Today":offset===1?"Tomorrow":fmtDate(d,{weekday:"long"});
+  const el = await botSay(`<p><b>${label}</b>, ${fmtDate(d,{month:"short",day:"numeric"})}. <span style="color:var(--muted)">(sample schedule)</span></p>
+    <div class="events" style="margin-top:10px">${eventsHTML(offset)}</div>`);
+  return el;
+}
+async function newsletter(){
+  if(!S.tags.length) return askInterests();
+  const m = matches(5);
+  const ev = eventsFor(0);
+  return botSay(`<div class="news">
+    <div class="subj">Your week at Wharton${S.name?", "+esc(S.name):""}</div>
+    <div class="from">From Bullet.in · Every Monday, 8:00 AM · 1 email instead of ${inboxStats().total}</div>
+    <ol>
+      ${ev.slice(0,2).map(e=>`<li><b>${esc(e.n)}</b>, ${e.time}</li>`).join("")}
+      ${m.slice(0,3).map(c=>`<li>${esc(c.t)}${c.d?` · <span class="due">${esc(c.dl)} ${fmtDate(addDays(c.d),{month:"short",day:"numeric"})}</span>`:""}</li>`).join("")}
+      ${S.custom.length?`<li>Watching for: ${S.custom.map(esc).join(", ")}</li>`:""}
+    </ol></div>
+    <p style="margin-top:10px">That's the whole email. Everything else stays out of your inbox.</p>`);
+}
+async function people(){
+  let ppl = [];
+  S.tags.forEach(t=>(PEOPLE[t]||[]).forEach(p=>{ if(!ppl.find(x=>x.nm===p.nm)) ppl.push(p); }));
+  if(!ppl.length) ppl = [{nm:"Trang Pham", rl:"Executive Director, Venture Lab", i:"TP"},{nm:"Eric Bradlow", rl:"Vice Dean of AI & Analytics", i:"EB"}];
+  const peers = 9 + S.tags.length*4;
+  return botSay(`<p>Faculty and staff worth a coffee chat:</p>
+    <div class="people" style="margin-top:10px">${ppl.slice(0,3).map(p=>`<div class="person"><div class="av">${p.i}</div><div><div class="nm">${esc(p.nm)}</div><div class="rl">${esc(p.rl)}</div></div></div>`).join("")}</div>
+    <p><b>${peers} first-years</b> share at least two of your interests. Opt in and I'll intro you to three of them. <span style="color:var(--muted)">(demo)</span></p>`);
+}
+async function surprise(){
+  const a = pickAdjacent([S.lastAdj]);
+  S.lastAdj = a.id;
+  return botSay(`<p>Something a little outside your usual lanes:</p>${stickyHTML(a)}`, {delay:650});
+}
+function restart(){
+  S.name=""; S.tags=[]; S.custom=[]; S.stage="name"; S.lastAdj=null;
+  feed.innerHTML=""; start();
+}
+
+async function askInterests(){
+  S.stage = "interests";
+  const chips = i => `<button class="pick${i.feat?"":" extra"}" type="button" data-id="${i.id}" aria-pressed="${S.tags.includes(i.id)}"${i.feat?"":" hidden"}>${i.label}</button>`;
+  const el = await botSay(`<p>${S.name?`Nice to meet you, <b>${esc(S.name)}</b>. `:""}What are you into? Tap a few, or just type it, like <i>"sports, marketing, and maybe newscasting"</i> or <i>"I like neuroscience"</i>.</p>
+    <div class="picker">${INTERESTS.map(chips).join("")}<button class="pick more" type="button">+ ${INTERESTS.filter(i=>!i.feat).length} more</button></div>
+    <button class="btn" type="button"${S.tags.length?"":" disabled"}>Build my bulletin</button>`);
+  const go = el.querySelector(".btn");
+  const chosen = new Set(S.tags);
+  el.querySelector(".more").onclick = e => { el.querySelectorAll(".extra").forEach(x=>x.hidden=false); e.currentTarget.hidden = true; };
+  el.querySelectorAll(".pick[data-id]").forEach(b=>b.onclick=()=>{
+    if(S.stage!=="interests") return;
+    const on = b.getAttribute("aria-pressed")!=="true";
+    b.setAttribute("aria-pressed",on); on?chosen.add(b.dataset.id):chosen.delete(b.dataset.id);
+    go.disabled = !chosen.size;
+  });
+  go.onclick=()=>{
+    if(S.stage!=="interests") return;
+    S.tags=[...chosen];
+    userSay(listLabels(S.tags));
+    go.disabled=true; buildBulletin();
+  };
+  setQuick([["Sports + media",()=>{S.tags=["sports","media","marketing"];buildBulletin();}],
+            ["Neuroscience + psych",()=>{S.tags=["neuro","research"];buildBulletin();}],
+            ["Finance + startups",()=>{S.tags=["finance","entre"];buildBulletin();}],
+            ["AI + data",()=>{S.tags=["tech","quant"];buildBulletin();}]]);
+}
+
+/* ---------- the router ---------- */
+const DAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+async function handle(text){
+  const low = norm(text);
+  const tags = detectTags(text);
+
+  /* first message: a name, interests, or both */
+  if(S.stage==="name"){
+    const nm = parseName(text);
+    if(nm) S.name = nm;
+    if(tags.length){ S.tags = tags; return buildBulletin(`${S.name?`Nice to meet you, ${esc(S.name)}. `:""}Got it: <b>${listLabels(tags)}</b>. Here's your board.`); }
+    if(!nm && /(like|love|into|interested|passionate|enjoy|want to|wanna)/.test(low)){ await unknownTopic(extractTopic(text)); return askInterests(); }
+    return askInterests();
+  }
+
+  if(/(^| )(start over|restart|reset)( |$)/.test(low)) return restart();
+
+  /* "not into finance" / "remove finance" */
+  if(tags.length && /(^| )(remove|drop|not into|not interested|no longer|don'?t like|dont like|hate|less|stop showing|no more)( |$)/.test(low)){
+    S.tags = S.tags.filter(t=>!tags.includes(t));
+    if(!S.tags.length) return askInterests();
+    return botSay(`Done. I took <b>${listLabels(tags)}</b> off your board. You're now on <b>${listLabels(S.tags)}</b>.`);
+  }
+
+  /* questions about a specific club or program */
+  const named = findAliases(text);
+  if(named.length && (low.split(" ").length<=6 || /(what|tell|about|info|more|join|apply|how|who|when|where)/.test(low))){
+    return botSay(`<p>Here's the rundown:</p><div class="list" style="margin-top:10px">${named.slice(0,3).map(id=>itemHTML(BY_ID[id])).join("")}</div>`);
+  }
+
+  /* intents */
+  if(/(^| )(deadlines?|due|apply|applications?|closing|close soon)( |$)/.test(low)) return deadlines();
+  if(/(newsletter|weekly email|my email|inbox|digest)/.test(low)) return newsletter();
+  if(/(who should|(^| )meet( |$)|(^| )people( |$)|network|(^| )connect|mentor|coffee chat|talk to)/.test(low) && !tags.length) return people();
+  if(/(surprise|random|outside my|something new|something different|explore)/.test(low) && !tags.length) return surprise();
+  if(/(today|tonight)/.test(low) && !tags.length) return dayView(0);
+  if(/tomorrow/.test(low) && !tags.length) return dayView(1);
+  if(/weekend/.test(low) && !tags.length) return dayView((6-today.getDay())||7);
+  const dIx = DAYS.findIndex(d=>low.includes(" "+d));
+  if(dIx>=0 && !tags.length){ let off = dIx - today.getDay(); if(off<0) off+=7; return dayView(off); }
+  if(/(events?|schedule|calendar|happening|going on)/.test(low) && !tags.length) return dayView(0);
+
+  /* interests */
+  if(tags.length){
+    const fresh = tags.filter(t=>!S.tags.includes(t));
+    if(S.stage==="interests"){ S.tags = [...new Set([...S.tags,...tags])]; return buildBulletin(); }
+    if(fresh.length) return addInterests(fresh, text);
+    const items = []; tags.forEach(t=>itemsFor(t,3).forEach(c=>{ if(!items.includes(c)) items.push(c); }));
+    return botSay(`<p>Already on your board. A few more for <b>${listLabels(tags)}</b>:</p><div class="list" style="margin-top:10px">${items.slice(0,3).map(itemHTML).join("")}</div>`);
+  }
+
+  if(/^ (hi|hey|hello|yo|sup|hii+)( |$)/.test(low)) return botSay(`Hey${S.name?" "+esc(S.name):""}! Tell me another interest, ask what's due, or ask who you should meet.`);
+  if(/(thank|thx|ty )/.test(low)) return botSay("Anytime. Go get it.");
+  if(/(what can you|help|how does|what do you|what is this|who are you)/.test(low))
+    return botSay(`<p>I read every club, program and event email so you don't have to. Then I:</p><p>• build your weekly board from your interests<br>• flag deadlines before they pass<br>• send one Monday email instead of fifty<br>• point you to people and lanes you didn't know existed</p><p>Try telling me anything you're into.</p>`);
+
+  /* sounds like an interest I don't have a lane for */
+  if(/(like|love|into|interested|passionate|enjoy|want to|wanna|curious|obsessed|major|study)/.test(low) || low.trim().split(" ").length<=3){
+    await unknownTopic(extractTopic(text));
+    if(S.stage==="interests") return;
+    return;
+  }
+  if(S.stage==="interests") return botSay(`I didn't catch an interest there. Try something like "sports and journalism" or tap a few above.`);
+  return botSay(`I'm a demo, so I keep it simple. Tell me something you're into, like "neuroscience" or "real estate", or tap a button below.`);
+}
+
+document.getElementById("composer").addEventListener("submit",e=>{
+  e.preventDefault();
+  const text = q.value.trim(); if(!text) return;
+  q.value=""; userSay(text); handle(text);
+});
+
+async function start(){
+  setQuick([["Skip",()=>{S.name="";askInterests();}]]);
+  await botSay(`<p>Hi! I'm <b>Bullet.in</b>, your guide to everything happening at Wharton.</p><p>I filter the flood of club and program emails down to the ones that actually fit you. What's your name? You can also just tell me what you're into.</p>`, {delay:350});
+  setTimeout(()=>{ try{ if(matchMedia("(hover:hover)").matches) q.focus(); }catch(e){} },50);
+}
+start();
+</script>
+
+</body></html>
